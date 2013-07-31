@@ -55,7 +55,7 @@ sub handler {
     my $results;
 
     if ($^O eq 'solaris') {
-        my $output = run_command('kstat -p ::mac_[tr]x_swlane0:[or]bytes');
+        my $output = run_command('kstat -p ::mac_[tr]x_[hs]wlane0:[or]bytes');
         chomp $output;
 
         # global0:0:mac_rx_swlane0:rbytes 5858602050
@@ -68,8 +68,12 @@ sub handler {
             next unless $key;
             my ($vnic, $dum1, $direction, $dum2) = split(':', $key);
             next unless $vnic;
-            $results->{$vnic . '_' . ($direction eq 'mac_rx_swlane0' ? 'in' : 'out' 
-                                     ) . '_bytes64'} = [ $val, 'l'];
+
+            # Some machines are setup with counters on hwlane0, some on swlane0
+            # If we're on the wrong one, it will read 0
+            next unless $val;
+            my $dir  = $direction =~ /mac_rx/ ? 'in' : 'out';
+            $results->{$vnic . '_' . $dir . '_bytes64'} = [ $val, 'l'];
         }
     } else {
         # Everything else is obviously linux, right?
